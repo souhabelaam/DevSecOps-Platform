@@ -1,0 +1,37 @@
+# Everything listed here is kept out of the build context:
+# faster builds, smaller image, no secrets baked in.
+
+.git/
+.gitignore
+
+# the image builds its own environment from requirements.txt
+.venv/
+venv/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# the database lives in the /data volume, never in the image
+*.db
+*.sqlite3
+*.log
+
+.env
+*.pem
+*.key
+
+# not needed to run the app
+Dockerfile
+.dockerignore
+.gitlab-ci.yml
+Jenkinsfile
+terraform/
+k8s/
+
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
