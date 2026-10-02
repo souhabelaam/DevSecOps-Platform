@@ -3,6 +3,7 @@ stages:
   - test
   - scan
   - build
+  - image-scan
 
 variables:
   # pip downloads go in the project folder so GitLab can cache them between runs
@@ -65,3 +66,19 @@ build:
   script:
     - docker build -t "$IMAGE" .
     - docker push "$IMAGE"
+
+trivy-image:
+  stage: image-scan
+  image:
+    name: aquasec/trivy:0.75.0
+    entrypoint: [""]
+  variables:
+    # trivy pulls the image from our private registry, so it needs to log in
+    TRIVY_USERNAME: "$CI_REGISTRY_USER"
+    TRIVY_PASSWORD: "$CI_REGISTRY_PASSWORD"
+    TRIVY_NO_PROGRESS: "true"
+  script:
+    # first run only prints the report (exit code 0), so we always see HIGH and CRITICAL
+    - trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0 "$IMAGE"
+    # second run is the gate: any CRITICAL with a fix available fails the job
+    - trivy image --severity CRITICAL --ignore-unfixed --exit-code 1 "$IMAGE"
