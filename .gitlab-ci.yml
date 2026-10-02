@@ -1,10 +1,13 @@
 # Pipeline stages run in this order. A failed stage stops the ones after it.
 stages:
   - test
+  - build
 
-# pip downloads go in the project folder so GitLab can cache them between runs
 variables:
+  # pip downloads go in the project folder so GitLab can cache them between runs
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  # one image name per commit, so every image traces back to its commit
+  IMAGE: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
 
 test:
   stage: test
@@ -22,3 +25,19 @@ test:
     - pytest --cov=app --cov-report=term --cov-fail-under=90
   # the regex tells GitLab where to read the coverage number in the log
   coverage: '/^TOTAL.+?(\d+\%)$/'
+
+build:
+  stage: build
+  # the docker client lives in this image, the daemon in the dind service below
+  image: docker:27
+  services:
+    - docker:27-dind
+  variables:
+    # dind generates TLS certs here and shares them with the client
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    # CI_REGISTRY_* are filled in by GitLab, no password stored in the repo
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+    - docker build -t "$IMAGE" .
+    - docker push "$IMAGE"
