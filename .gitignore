@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments (local only, rebuilt from requirements.txt)
+.venv/
+venv/
+
+# Local databases and logs (runtime data, never committed)
+*.db
+*.sqlite3
+*.log
+
+# Secrets and local config
+.env
+*.pem
+*.key
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="card">
+  <header>
+    <div>
+      <h1>Task Tracker</h1>
+      <p class="subtitle">{{ counts.active }} of {{ counts.all }} tasks remaining</p>
+    </div>
+    <div class="ring" style="--pct: {{ (100 * counts.done / counts.all) | round | int if counts.all else 0 }}">
+      <span>{{ (100 * counts.done / counts.all) | round | int if counts.all else 0 }}%</span>
+    </div>
+  </header>
+
+  <form class="add" method="post" action="{{ url_for('web.add') }}">
+    <input type="text" name="title" placeholder="Add a new task..." required maxlength="200" autofocus>
+    <button class="btn primary" type="submit">Add</button>
+  </form>
+
+  <nav class="filters">
+    {% for key, label in (('all', 'All'), ('active', 'Active'), ('done', 'Done')) %}
+    <a href="{{ url_for('web.index', filter=key) }}" class="{{ 'active' if current == key }}">
+      {{ label }} <small>{{ counts[key] }}</small>
+    </a>
+    {% endfor %}
+  </nav>
+
+  <ul class="tasks">
+    {% for t in tasks %}
+    <li class="{{ 'done' if t.done }}">
+      <form method="post" action="{{ url_for('web.toggle', task_id=t.id) }}">
+        <button class="check" type="submit" title="{{ 'Mark as not done' if t.done else 'Mark as done' }}">
+          {% if t.done %}&#10003;{% endif %}
+        </button>
+      </form>
+
+      <span class="title">{{ t.title }}</span>
+
+      <form class="edit-form" method="post" action="{{ url_for('web.edit', task_id=t.id) }}" hidden>
+        <input type="text" name="title" value="{{ t.title }}" required maxlength="200">
+        <button class="btn primary sm" type="submit">Save</button>
+        <button class="btn ghost sm" type="button" data-cancel>Cancel</button>
+      </form>
+
+      <div class="actions">
+        <button class="btn ghost sm" type="button" data-edit>Edit</button>
+        <form method="post" action="{{ url_for('web.delete', task_id=t.id) }}">
+          <button class="btn danger sm" type="submit">Delete</button>
+        </form>
+      </div>
+    </li>
+    {% else %}
+    <li class="empty">Nothing here yet.</li>
+    {% endfor %}
+  </ul>
+</main>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% endblock %}
