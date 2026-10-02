@@ -1,6 +1,7 @@
 # Pipeline stages run in this order. A failed stage stops the ones after it.
 stages:
   - test
+  - scan
   - build
 
 variables:
@@ -25,6 +26,20 @@ test:
     - pytest --cov=app --cov-report=term --cov-fail-under=90
   # the regex tells GitLab where to read the coverage number in the log
   coverage: '/^TOTAL.+?(\d+\%)$/'
+
+gitleaks:
+  stage: scan
+  # pinned version, so a new release can't change results under us
+  image:
+    name: zricethezav/gitleaks:v8.21.2
+    entrypoint: [""]   # the image starts gitleaks by default, we want a shell
+  variables:
+    # GitLab clones only the last commit by default, but secrets can hide in old ones
+    GIT_DEPTH: "0"
+  script:
+    # exit code 1 when a secret is found, which fails the job.
+    # --redact hides the secret value in the log
+    - gitleaks detect --source . --redact --verbose
 
 build:
   stage: build
