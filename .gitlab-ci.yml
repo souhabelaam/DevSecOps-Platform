@@ -41,6 +41,15 @@ gitleaks:
     # --redact hides the secret value in the log
     - gitleaks detect --source . --redact --verbose
 
+semgrep:
+  stage: scan
+  # pinned, same reason as gitleaks
+  image: semgrep/semgrep:1.179.0
+  script:
+    # p/python and p/flask are rule packs from the Semgrep registry.
+    # --error makes findings fail the job, --metrics=off stops usage reporting
+    - semgrep scan --config p/python --config p/flask --error --metrics=off .
+
 build:
   stage: build
   # the docker client lives in this image, the daemon in the dind service below
