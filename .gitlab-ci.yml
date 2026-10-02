@@ -51,6 +51,18 @@ semgrep:
     # --error makes findings fail the job, --metrics=off stops usage reporting
     - semgrep scan --config p/python --config p/flask --error --metrics=off .
 
+trivy-deps:
+  stage: scan
+  image:
+    name: aquasec/trivy:0.75.0
+    entrypoint: [""]
+  variables:
+    TRIVY_NO_PROGRESS: "true"
+  script:
+    # fs = scan files in the repo. Only requirements.txt matters here, because
+    # requirements-dev.txt is test tooling and never ships in the image
+    - trivy fs --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 requirements.txt
+
 build:
   stage: build
   # the docker client lives in this image, the daemon in the dind service below
