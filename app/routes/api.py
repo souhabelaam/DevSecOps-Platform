@@ -8,7 +8,9 @@ bp = Blueprint("api", __name__, url_prefix="/api")
 
 def _read_title():
     """Return (title, error_response). Shared by create and update."""
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):  # missing, invalid, or valid JSON that is not an object
+        data = {}
     title = str(data.get("title", "")).strip()
     if not title:
         return None, (jsonify(error="title is required"), 400)

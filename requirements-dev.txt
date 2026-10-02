@@ -1,0 +1,4 @@
+# Test tooling only. The Docker image installs requirements.txt, never this file.
+-r requirements.txt
+pytest==8.4.2
+pytest-cov==7.1.0
