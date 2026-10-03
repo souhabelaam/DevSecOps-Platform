@@ -5,6 +5,7 @@ stages:
   - build
   - image-scan
   - release
+  - deploy
 
 variables:
   # pip downloads go in the project folder so GitLab can cache them between runs
@@ -96,6 +97,13 @@ build:
   script:
     - docker build -t "$IMAGE" .
     - docker push "$IMAGE"
+    # the registry gives every pushed image a digest (a fingerprint of its exact content).
+    # We save it so the deploy job can run that exact image, not just "whatever has this tag"
+    - docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE" | sed 's/^/IMAGE_DIGEST=/' > build.env
+  artifacts:
+    reports:
+      # dotenv turns the file into a variable, IMAGE_DIGEST, available in the later jobs
+      dotenv: build.env
 
 trivy-image:
   stage: image-scan
@@ -130,6 +138,37 @@ release:
     - docker pull "$IMAGE"
     - docker tag "$IMAGE" "$CI_REGISTRY_IMAGE:latest"
     - docker push "$CI_REGISTRY_IMAGE:latest"
+
+deploy:
+  stage: deploy
+  # runs on the runner installed on the laptop, the only one that can reach the kind cluster
+  tags:
+    - local-kind
+  # only main deploys, and only after every earlier stage (tests, scans, release) passed
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  # this image has kubectl; pinned, and the same minor version as the cluster (1.37)
+  image:
+    name: alpine/k8s:1.37.1
+    entrypoint: [""]
+  variables:
+    # the cluster's address on the Docker network "kind", not a secret.
+    # KUBE_TOKEN (the robot's key card) and KUBE_CA_FILE (the cluster's certificate)
+    # come from GitLab CI variables, never from this repo
+    KUBE_SERVER: "https://devsecops-control-plane:6443"
+  script:
+    # tell kubectl where the cluster is and who we are: the limited ci-deployer account
+    - kubectl config set-cluster kind --server="$KUBE_SERVER" --certificate-authority="$KUBE_CA_FILE"
+    - kubectl config set-credentials ci-deployer --token="$KUBE_TOKEN"
+    - kubectl config set-context kind --cluster=kind --user=ci-deployer --namespace=task-tracker
+    - kubectl config use-context kind
+    # swap the template image line for the digest of the image we just built and scanned
+    - sed "s|^\( *image: \).*|\1${IMAGE_DIGEST}|" k8s/deployment.yaml > /tmp/deployment.yaml
+    - grep "image:" /tmp/deployment.yaml
+    # the namespace and the bootstrap folder are NOT applied here: the robot has no right to
+    - kubectl apply -f k8s/pvc.yaml -f /tmp/deployment.yaml -f k8s/service.yaml -f k8s/networkpolicy.yaml
+    # wait until the new pod is ready; the job fails if it isn't within 3 minutes
+    - kubectl rollout status deployment/task-tracker --timeout=180s
 
 trivy-sbom:
   stage: image-scan

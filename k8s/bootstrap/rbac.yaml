@@ -1,0 +1,65 @@
+# One-time setup, applied by hand by the cluster admin. The deploy job never applies this file:
+# an account must not be able to edit its own permissions.
+#
+# What it creates: an identity for the pipeline ("ServiceAccount") and a short list of
+# things that identity is allowed to do, only inside the task-tracker namespace.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ci-deployer
+  namespace: task-tracker
+automountServiceAccountToken: false   # no pod uses this account, only the pipeline does, from outside
+---
+# A Role is a list of allowed actions on named resource types, inside ONE namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ci-deployer
+  namespace: task-tracker
+rules:
+  # what "kubectl apply" needs for our four manifests: read, create, update. Never delete
+  - apiGroups: [""]
+    resources: ["services", "persistentvolumeclaims"]
+    verbs: ["get", "create", "patch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "create", "patch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get", "create", "patch"]
+  # what "kubectl rollout status" needs to wait for the new pod: read-only
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+# A RoleBinding connects the identity to the Role. Without it, the Role does nothing.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ci-deployer
+  namespace: task-tracker
+subjects:
+  - kind: ServiceAccount
+    name: ci-deployer
+    namespace: task-tracker
+roleRef:
+  kind: Role
+  name: ci-deployer
+  apiGroup: rbac.authorization.k8s.io
+---
+# A ServiceAccount has no password by default. This Secret asks Kubernetes to generate a
+# long-lived token for it. The token goes into a masked GitLab CI variable, never into git.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ci-deployer-token
+  namespace: task-tracker
+  annotations:
+    kubernetes.io/service-account.name: ci-deployer
+type: kubernetes.io/service-account-token
