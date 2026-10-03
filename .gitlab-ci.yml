@@ -157,9 +157,6 @@ deploy:
     # come from GitLab CI variables, never from this repo
     KUBE_SERVER: "https://devsecops-control-plane:6443"
   script:
-    # TEMPORARY debug: shows only the size of the secrets, never their content. Remove once deploy works
-    - echo "KUBE_TOKEN length is ${#KUBE_TOKEN} and starts with $(printf %.3s "$KUBE_TOKEN")"
-    - test -s "$KUBE_CA_FILE" && echo "KUBE_CA_FILE is present with $(wc -c < "$KUBE_CA_FILE") bytes"
     # tell kubectl where the cluster is and who we are: the limited ci-deployer account
     - kubectl config set-cluster kind --server="$KUBE_SERVER" --certificate-authority="$KUBE_CA_FILE"
     - kubectl config set-credentials ci-deployer --token="$KUBE_TOKEN"
