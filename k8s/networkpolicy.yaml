@@ -1,0 +1,27 @@
+# A NetworkPolicy is a firewall for pods. Once a pod is selected by a policy,
+# everything not explicitly allowed below is blocked.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: task-tracker
+  namespace: task-tracker
+spec:
+  # which pods this firewall applies to: the app pods
+  podSelector:
+    matchLabels:
+      app: task-tracker
+  # we control both directions: traffic coming in, and traffic going out
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # the only thing allowed in: TCP port 8000, the app's port. Every other port is closed.
+    # No "from" given, so any source is allowed: browser traffic enters through the node
+    # port and its source address is not predictable, so we restrict the port, not the sender
+    - ports:
+        - protocol: TCP
+          port: 8000
+  # no egress rules = the pod may not start any outgoing connection.
+  # The app needs none: its database is a local file, it calls no other service.
+  # If someone hacks the app, it can't download tools or send data out
+  egress: []

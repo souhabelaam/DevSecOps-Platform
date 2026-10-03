@@ -1,0 +1,17 @@
+# A pod's IP changes every time it is recreated. A Service is a stable address
+# in front of the pods: it finds them by label and sends traffic to the ready ones.
+apiVersion: v1
+kind: Service
+metadata:
+  name: task-tracker
+  namespace: task-tracker
+spec:
+  # NodePort = also open a port on the node itself. The kind config maps that
+  # node port (30080) to localhost:8080 on your PC
+  type: NodePort
+  selector:
+    app: task-tracker          # send traffic to pods with this label (set in deployment.yaml)
+  ports:
+    - port: 80                 # port other pods inside the cluster use
+      targetPort: 8000         # port the app listens on inside the container
+      nodePort: 30080          # port on the node, must match kind-config.yaml

@@ -1,0 +1,85 @@
+# A Deployment says "keep N copies of this pod running". If one dies, Kubernetes starts another.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-tracker
+  namespace: task-tracker
+  labels:
+    app: task-tracker
+spec:
+  # one copy only: SQLite is a single file, two pods writing to it would corrupt it
+  replicas: 1
+  strategy:
+    # stop the old pod before starting the new one. The default (rolling) would run both
+    # at once for a moment, and both would use the same database file.
+    type: Recreate
+  selector:
+    # how the Deployment finds its own pods: by this label
+    matchLabels:
+      app: task-tracker
+  template:
+    # everything below describes the pod itself
+    metadata:
+      labels:
+        app: task-tracker
+    spec:
+      # the app never talks to the Kubernetes API, so don't mount an API token into the pod.
+      # If the app were hacked, there would be no token to steal
+      automountServiceAccountToken: false
+      securityContext:
+        # pod-level rules, applied to every container
+        runAsNonRoot: true          # refuse to start if the image would run as root
+        runAsUser: 10001            # same numeric id as the "app" user in the Dockerfile
+        runAsGroup: 10001
+        fsGroup: 10001              # the mounted volume becomes writable for this group
+        seccompProfile:
+          type: RuntimeDefault      # block dangerous system calls with the runtime's default filter
+      containers:
+        - name: task-tracker
+          # tagged with the commit that built it, never "latest": we know exactly what runs.
+          # The pipeline will replace this tag with the new commit on every deploy
+          image: registry.gitlab.com/souhabenelaam/devsecops-platform:86a9b858
+          # use the image if it is already on the node. The first test loads it by hand
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000   # documentation for humans and tools, the Service does the real routing
+          securityContext:
+            # container-level rules, stricter than the pod-level ones
+            allowPrivilegeEscalation: false   # no sudo / setuid tricks
+            readOnlyRootFilesystem: true      # the image's files can't be changed while running
+            capabilities:
+              drop: ["ALL"]                   # remove every special Linux power
+          resources:
+            requests:                         # what the scheduler reserves for this pod
+              cpu: 100m                       # 0.1 of a CPU core
+              memory: 128Mi
+            limits:                           # hard ceiling: above memory limit the pod is killed
+              cpu: 500m
+              memory: 256Mi
+          # "ready" = send traffic to me. Until it passes, the Service skips this pod
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 3       # default is 1s, too tight on a busy laptop
+          # "alive" = if this fails 3 times, Kubernetes restarts the container
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 3       # same reason: one slow answer must not kill a healthy pod
+          volumeMounts:
+            - name: data
+              mountPath: /data      # where the app writes tasks.db (DB_PATH in the Dockerfile)
+            - name: tmp
+              mountPath: /tmp       # gunicorn needs a writable /tmp, and the root filesystem is read-only
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: task-tracker-data   # the claim from pvc.yaml
+        - name: tmp
+          emptyDir: {}                     # scratch space, erased when the pod goes away

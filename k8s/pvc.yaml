@@ -1,0 +1,17 @@
+# A PersistentVolumeClaim is a request for disk space that outlives the pod.
+# Without it, /data would vanish every time the pod restarts, and so would the tasks.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: task-tracker-data
+  namespace: task-tracker
+spec:
+  # ReadWriteOnce = one node can mount it for writing. SQLite is a single file,
+  # so only one pod should write to it anyway.
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      # the database is tiny, 1 GiB is plenty
+      storage: 1Gi
+  # no storageClassName: kind's default class (local-path) is used
