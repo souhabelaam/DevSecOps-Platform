@@ -163,7 +163,8 @@ deploy:
     - kubectl config set-context kind --cluster=kind --user=ci-deployer --namespace=task-tracker
     - kubectl config use-context kind
     # swap the template image line for the digest of the image we just built and scanned
-    - sed "s|^\( *image: \).*|\1${IMAGE_DIGEST}|" k8s/deployment.yaml > /tmp/deployment.yaml
+    # (the pattern avoids a colon followed by a space: YAML would read that as a key and break the line)
+    - sed "s|^\( *image:\) .*|\1 ${IMAGE_DIGEST}|" k8s/deployment.yaml > /tmp/deployment.yaml
     - grep "image:" /tmp/deployment.yaml
     # the namespace and the bootstrap folder are NOT applied here: the robot has no right to
     - kubectl apply -f k8s/pvc.yaml -f /tmp/deployment.yaml -f k8s/service.yaml -f k8s/networkpolicy.yaml
