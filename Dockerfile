@@ -47,7 +47,7 @@ COPY --chown=app:app wsgi.py .
 COPY --chown=app:app app ./app
 
 # nothing below runs as root, including the container itself
-USER app
+USER 10001:10001
 
 VOLUME ["/data"]
 
@@ -57,7 +57,7 @@ EXPOSE 8000
 # the slim image has no curl, so use Python for the check.
 # 3 failures in a row -> container shows as unhealthy
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)" || exit 1
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
 
 # gunicorn instead of the Flask dev server. 0.0.0.0 so it is reachable from outside the container.
 # JSON form makes gunicorn PID 1, so it gets the stop signal from "docker stop"
