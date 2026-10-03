@@ -6,6 +6,11 @@ metadata:
   namespace: task-tracker
   labels:
     app: task-tracker
+  annotations:
+    # Checkov skips, each with its reason. Both go away when the pipeline deploys:
+    # it will write image@sha256:<digest> and the cluster will get a registry pull secret
+    checkov.io/skip1: "CKV_K8S_43=Image is pinned by unique commit tag for now; the deploy stage will pin the digest"
+    checkov.io/skip2: "CKV_K8S_15=Tag is unique per commit so IfNotPresent is safe; Always needs a registry pull secret, added with the automated deploy"
 spec:
   # one copy only: SQLite is a single file, two pods writing to it would corrupt it
   replicas: 1
