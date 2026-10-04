@@ -9,8 +9,6 @@ pipeline {
     }
 
     environment {
-        // local image name, never pushed
-        IMAGE = "task-tracker:${env.GIT_COMMIT?.take(8) ?: 'local'}"
         TRIVY_NO_PROGRESS = 'true'
         TRIVY_TIMEOUT = '15m'
     }
@@ -63,6 +61,11 @@ pipeline {
         stage('build') {
             agent any
             steps {
+                script {
+                    // local image name, never pushed; later stages read env.IMAGE
+                    def sha = env.GIT_COMMIT ? env.GIT_COMMIT.take(8) : "b${env.BUILD_NUMBER}"
+                    env.IMAGE = "task-tracker:${sha}"
+                }
                 // uses the host Docker through the mounted socket
                 sh 'docker build -t "$IMAGE" .'
             }
