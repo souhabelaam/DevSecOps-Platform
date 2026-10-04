@@ -1,4 +1,4 @@
-# Latest Amazon Linux 2023 image, looked up instead of hard-coding an ID.
+# Latest Amazon Linux 2023 image
 data "aws_ami" "al2023" {
   most_recent = true
   owners      = ["amazon"]
@@ -9,12 +9,10 @@ data "aws_ami" "al2023" {
   }
 }
 
-# The firewall: who may talk to the server.
 resource "aws_security_group" "app" {
   name        = "task-tracker-sg"
-  description = "Task Tracker: app port from my IP only"
+  description = "Task Tracker: app port from one IP only"
 
-  # Incoming: only YOUR address, only the app port.
   ingress {
     description = "Task Tracker app from my IP only"
     from_port   = 8000
@@ -23,7 +21,7 @@ resource "aws_security_group" "app" {
     cidr_blocks = [var.my_ip_cidr]
   }
 
-  # Outgoing: only HTTPS (to download updates / pull the image).
+  # HTTPS only, enough to pull updates and the image
   egress {
     description = "HTTPS out"
     from_port   = 443
@@ -33,24 +31,31 @@ resource "aws_security_group" "app" {
   }
 }
 
-# The server itself.
 resource "aws_instance" "app" {
-  # checkov:skip=CKV2_AWS_41: the app never calls AWS APIs, so no role (least privilege); Learner Lab also forbids custom roles
+  # checkov:skip=CKV2_AWS_41: the app makes no AWS API calls, so no role (least privilege); Learner Lab blocks custom roles anyway
   ami                    = data.aws_ami.al2023.id
   instance_type          = var.instance_type
   vpc_security_group_ids = [aws_security_group.app.id]
 
-  # Extra security monitoring and disk performance (Checkov asks for these).
+  # first-boot script: installs Docker and starts the app
+  user_data = templatefile("${path.module}/user_data.sh.tftpl", {
+    registry_host  = var.registry_host
+    registry_user  = var.registry_user
+    registry_token = var.registry_token
+    image          = var.image
+  })
+  # a changed script means a new server, not a stale one
+  user_data_replace_on_change = true
+
   monitoring    = true
   ebs_optimized = true
 
-  # IMDSv2 only: blocks a classic credential-theft trick (SSRF).
+  # IMDSv2 only
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "required"
   }
 
-  # Encrypted disk.
   root_block_device {
     encrypted = true
   }

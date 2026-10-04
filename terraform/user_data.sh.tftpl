@@ -1,0 +1,26 @@
+#!/bin/bash
+# Runs once, as root, on the first boot of the server.
+# Stop at the first error, and fail if a variable is missing.
+set -euo pipefail
+
+# Install and start Docker (Amazon Linux 2023 package)
+dnf install -y docker
+systemctl enable --now docker
+
+# Log in with the read-only token, pull the image, then forget the login
+echo '${registry_token}' | docker login ${registry_host} -u '${registry_user}' --password-stdin
+docker pull '${image}'
+docker logout ${registry_host}
+
+# Same hardening as the Kubernetes deployment
+docker run -d --name task-tracker \
+  --restart unless-stopped \
+  --user 10001:10001 \
+  --read-only \
+  --tmpfs /tmp \
+  --cap-drop ALL \
+  --security-opt no-new-privileges \
+  --memory 256m \
+  -v tt-data:/data \
+  -p 8000:8000 \
+  '${image}'

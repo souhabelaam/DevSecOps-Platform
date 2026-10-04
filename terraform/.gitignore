@@ -1,7 +1,6 @@
-# Downloaded plugins and local state: never commit (state can contain secrets).
 .terraform/
 *.tfstate
 *.tfstate.*
 
-# Holds my real IP: stays on my PC. Copy terraform.tfvars.example to create it.
+# holds a real IP, local only
 terraform.tfvars

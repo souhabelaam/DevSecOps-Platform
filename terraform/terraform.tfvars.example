@@ -1,4 +1,7 @@
-# >>> EDIT THE LINE BELOW: put YOUR public IP, keep the /32 at the end <<<
-# Find your IP by opening https://checkip.amazonaws.com in a browser.
-# 203.0.113.25 is a documentation example, not a real address.
+# Copy to terraform.tfvars and set your own public IP (kept out of git).
 my_ip_cidr = "203.0.113.25/32"
+
+# digest of the image the pipeline built and scanned (see the build job log)
+image         = "registry.gitlab.com/souhabenelaam/devsecops-platform@sha256:<digest>"
+registry_user = "<deploy token username>"
+# registry_token goes in the env var TF_VAR_registry_token, not here
