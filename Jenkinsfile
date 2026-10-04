@@ -4,7 +4,6 @@ pipeline {
     agent none
 
     options {
-        timestamps()
         // keep the log of the last 10 builds only
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
