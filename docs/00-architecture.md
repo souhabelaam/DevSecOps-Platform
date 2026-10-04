@@ -7,30 +7,18 @@ temporary AWS server. The diagrams render directly on GitLab.
 ## 1. The pipeline: from commit to running app
 
 ```mermaid
-flowchart LR
+flowchart TB
     dev([Developer]) -->|git push| repo[(GitLab repo)]
     repo --> test
 
     subgraph ci [GitLab CI pipeline]
-        direction LR
-        test["test<br/>pytest, 90% coverage"] --> scan
-        subgraph scan [scan: code and config]
-            direction TB
-            gl[Gitleaks<br/>secrets]
-            sg[Semgrep<br/>code flaws]
-            td[Trivy<br/>dependencies]
-            hl[Hadolint<br/>Dockerfile]
-            ck[Checkov<br/>Dockerfile, k8s, Terraform]
-        end
-        scan --> build["build<br/>Docker image"]
-        build --> imgscan
-        subgraph imgscan [image-scan]
-            direction TB
-            ti[Trivy image<br/>block CRITICAL]
-            sbom[SBOM<br/>CycloneDX]
-        end
-        imgscan --> release["release<br/>tag latest, main only"]
-        release --> deploy["deploy<br/>main only"]
+        direction TB
+        test["<b>test</b><br/>pytest, 90% coverage"] --> scan
+        scan["<b>scan</b> (5 jobs in parallel)<br/>Gitleaks: secrets<br/>Semgrep: code flaws<br/>Trivy: dependencies<br/>Hadolint: Dockerfile<br/>Checkov: Dockerfile, k8s, Terraform"] --> build
+        build["<b>build</b><br/>Docker image"] --> imgscan
+        imgscan["<b>image-scan</b><br/>Trivy image: block CRITICAL<br/>SBOM CycloneDX"] --> release
+        release["<b>release</b><br/>tag latest, main only"] --> deploy
+        deploy["<b>deploy</b><br/>main only"]
     end
 
     build -->|push by SHA| reg[(GitLab Container Registry)]
