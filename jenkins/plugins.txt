@@ -2,3 +2,4 @@ workflow-aggregator
 git
 docker-workflow
 credentials-binding
+pipeline-graph-view
