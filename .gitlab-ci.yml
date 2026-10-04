@@ -78,9 +78,8 @@ checkov:
     name: bridgecrew/checkov:3.3.22
     entrypoint: [""]
   script:
-    # IaC scanner: the Dockerfile and the Kubernetes manifests in k8s/.
-    # The Terraform framework gets added in the Terraform phase
-    - checkov -d . --framework dockerfile --framework kubernetes --compact
+    # IaC scanner: the Dockerfile, the Kubernetes manifests in k8s/ and the Terraform in terraform/
+    - checkov -d . --framework dockerfile --framework kubernetes --framework terraform --compact
 
 build:
   stage: build

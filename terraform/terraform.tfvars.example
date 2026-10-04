@@ -1,0 +1,4 @@
+# >>> EDIT THE LINE BELOW: put YOUR public IP, keep the /32 at the end <<<
+# Find your IP by opening https://checkip.amazonaws.com in a browser.
+# 203.0.113.25 is a documentation example, not a real address.
+my_ip_cidr = "203.0.113.25/32"
