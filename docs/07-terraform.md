@@ -19,9 +19,10 @@ budget is limited.
 | File | Role |
 |---|---|
 | `versions.tf` | Pins Terraform (`>= 1.9`) and the AWS provider (`~> 6.0`) |
-| `variables.tf` | Region, instance size, allowed IP |
+| `variables.tf` | Region, instance size, allowed IP (later also image and registry login, see doc 09) |
 | `main.tf` | Firewall and server |
-| `terraform.tfvars.example` | Template for the allowed IP |
+| `user_data.sh.tftpl`, `outputs.tf` | First-boot script and printed app address, added in doc 09 |
+| `terraform.tfvars.example` | Template for the local values |
 | `.terraform.lock.hcl` | Exact provider version and hashes, committed for reproducible runs |
 
 ## Hardening choices
@@ -70,8 +71,8 @@ afterwards.
 `trivy-deps` also shows red in that run. The cause was a timeout while downloading
 Trivy's vulnerability database, not a finding; it passes on `main`.
 
-## What is not done yet
+## What happens next
 
-- `terraform plan` needs AWS credentials, so it waits for the AWS phase. For now
-  `terraform validate` and `terraform fmt -check` are used locally.
-- `apply` and `destroy` will run once from the local machine in the AWS phase.
+`terraform plan`, `apply` and `destroy` need AWS credentials, so they are not in the
+pipeline. Here only `terraform validate` and `terraform fmt -check` run locally. The real
+run on AWS is described in [09-aws-deployment.md](09-aws-deployment.md).

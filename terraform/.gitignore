@@ -4,3 +4,7 @@
 
 # holds a real IP, local only
 terraform.tfvars
+
+# plan files contain the registry token
+tfplan
+*.tfplan
