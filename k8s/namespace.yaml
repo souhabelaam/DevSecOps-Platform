@@ -1,11 +1,6 @@
-# A namespace is a named folder inside the cluster. Everything of ours goes in it,
-# so it stays separate from the cluster's own system pods and can be deleted in one command.
 apiVersion: v1
 kind: Namespace
 metadata:
   name: task-tracker
   labels:
-    # Pod Security Admission: the cluster itself refuses any pod in this namespace
-    # that breaks the "restricted" rules (root user, privilege escalation, extra capabilities...).
-    # "enforce" = reject it. This is a second lock behind our own securityContext.
     pod-security.kubernetes.io/enforce: restricted

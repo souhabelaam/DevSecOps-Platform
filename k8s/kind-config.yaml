@@ -6,9 +6,6 @@ name: devsecops
 nodes:
   - role: control-plane
     extraPortMappings:
-      # the "node" is a Docker container, so its ports are not on your PC by default.
-      # This publishes node port 30080 as localhost:8080.
-      # The Service we write next will listen on 30080 inside the cluster.
       - containerPort: 30080
         hostPort: 8080
         listenAddress: "127.0.0.1"   # only this PC can reach it, not the local network
